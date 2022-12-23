@@ -262,6 +262,12 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onCreateNewFolder(String folderName)
         {
+            if(currentFolderID == -1)
+            {
+                Toast.makeText(MainActivity.this, "Can't create new folder in trash bin!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             FolderDAO folderInterface = AppDatabase.getInstance(MainActivity.this).folderInterface();
 
             if(folderInterface.checkIfFolderAlreadyExists(folderName) == 1)
