@@ -12,6 +12,8 @@ import android.widget.Spinner;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
+
+import com.example.appghichu.AppDatabase;
 import com.example.appghichu.R;
 import com.example.appghichu.interfaces.OnMoveFoldersListener;
 import com.example.appghichu.interfaces.SimpleCallBack;
@@ -48,6 +50,9 @@ public class MoveFolderDialog extends DialogFragment
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState)
     {
         super.onViewCreated(view, savedInstanceState);
+
+        folders.add(new AnimatingFolderDTO(AppDatabase.getInstance(getContext())
+                .folderInterface().findFolderByID(0))); // adding main folder for consideration
 
         okBtn = view.findViewById(R.id.okBtn);
         dropdownList = view.findViewById(R.id.dropdownList);

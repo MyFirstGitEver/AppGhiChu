@@ -226,7 +226,20 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onMoveToFolderManager()
         {
-            new FolderManagerFragment(() -> initFolderList()).show(getSupportFragmentManager(), "folder manager");
+            new FolderManagerFragment(() ->
+            {
+                FolderEntity folder = AppDatabase.getInstance(MainActivity.this).folderInterface()
+                        .findFolderByID(currentFolderID);
+
+                if(folder != null)
+                {
+                    folderTxt.setText(folder.getFolderName());
+                    initFolderList();
+                }
+                else
+                    onMoveToFolder(0);
+
+            }).show(getSupportFragmentManager(), "folder manager");
         }
     };
 

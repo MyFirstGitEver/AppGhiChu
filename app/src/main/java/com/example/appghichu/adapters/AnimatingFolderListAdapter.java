@@ -21,6 +21,7 @@ import com.example.appghichu.Utils;
 import com.example.appghichu.daos.FolderDAO;
 import com.example.appghichu.interfaces.OnFolderManagerListener;
 import com.example.appghichu.objects.dtos.AnimatingFolderDTO;
+import com.example.appghichu.objects.entities.FolderEntity;
 
 import java.util.List;
 
@@ -105,6 +106,15 @@ public class AnimatingFolderListAdapter extends RecyclerView.Adapter<AnimatingFo
     public int getItemCount()
     {
         return folders.size();
+    }
+
+    public void reDisplayFolderList(List<FolderEntity> newList)
+    {
+        folders.clear();
+        for(FolderEntity folder : newList)
+            folders.add(new AnimatingFolderDTO(folder));
+
+        notifyDataSetChanged();
     }
 
     public class AnimatingFolderViewHolder extends RecyclerView.ViewHolder

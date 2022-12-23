@@ -62,7 +62,7 @@ public class FolderListAdapter extends RecyclerView.Adapter<FolderListAdapter.Fo
                 for(int i=pos+1;i<folders.size();i++)
                 {
                     FolderDTO belowFolder = folders.get(i);
-                    if(belowFolder.marginLeft == marginLeft)
+                    if(belowFolder.marginLeft <= marginLeft)
                         break;
 
                     lastChildLevelPos = i;

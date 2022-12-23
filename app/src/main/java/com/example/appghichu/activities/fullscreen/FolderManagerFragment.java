@@ -27,6 +27,7 @@ import com.example.appghichu.dialogs.RenameFolderDialog;
 import com.example.appghichu.interfaces.OnFolderManagerListener;
 import com.example.appghichu.interfaces.SimpleCallBack;
 import com.example.appghichu.objects.dtos.AnimatingFolderDTO;
+import com.example.appghichu.objects.dtos.FolderDTO;
 import com.example.appghichu.objects.entities.FolderEntity;
 
 import java.util.ArrayList;
@@ -114,7 +115,6 @@ public class FolderManagerFragment extends DialogFragment
                         {
                             folders.get(index).folder.setFolderName(folderName);
                             adapter.notifyItemChanged(index);
-                            callback.run();
                         })
                         .show(getActivity().getSupportFragmentManager(), "rename");
             }
@@ -127,10 +127,10 @@ public class FolderManagerFragment extends DialogFragment
                     AppDatabase.getInstance(getContext()).folderInterface().deleteFolderWithID(id);
                     folders.remove(index);
                     adapter.notifyItemRemoved(index);
-                    callback.run();
-
                     isSelecting = false;
-                    adapter.notifyDataSetChanged();
+
+                    adapter.reDisplayFolderList(
+                            AppDatabase.getInstance(getContext()).folderInterface().listAllFoldersUnderManagement());
                 }, getContext());
             }
 
@@ -140,10 +140,17 @@ public class FolderManagerFragment extends DialogFragment
                 new MoveFolderDialog(folders,
                         (parentID) ->
                         {
+                            ArrayList<Integer> ids = getInbreedingFolders(
+                                    AppDatabase.getInstance(getContext()).folderInterface().findFolderByID(parentID));
+
+                            if(ids.contains(id))
+                            {
+                                Toast.makeText(getContext(), "Can't move to this folder!", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+
                             AppDatabase.getInstance(getContext()).folderInterface().moveFolder(parentID, id);
                             Toast.makeText(getContext(), "Moved successfully", Toast.LENGTH_SHORT).show();
-
-                            callback.run();
 
                             isSelecting = false;
                             adapter.notifyDataSetChanged();
@@ -166,7 +173,11 @@ public class FolderManagerFragment extends DialogFragment
             adapter.notifyDataSetChanged();
         });
 
-        backBtn.setOnClickListener((View v) -> dismiss());
+        backBtn.setOnClickListener((View v) ->
+        {
+            callback.run();
+            dismiss();
+        });
 
         selectAllBtn = view.findViewById(R.id.selectAllBtn);
         deleteBtn = view.findViewById(R.id.deleteBtn);
@@ -191,11 +202,12 @@ public class FolderManagerFragment extends DialogFragment
                     }
 
                     AppDatabase.getInstance(getContext()).folderInterface().deleteFolders(ids);
+                    adapter.reDisplayFolderList(
+                            AppDatabase.getInstance(getContext()).folderInterface().listAllFoldersUnderManagement());
 
                     moreOptionsArea.transitionToStart();
                     isSelecting = false;
                     adapter.notifyDataSetChanged();
-                    callback.run();
                 }, getContext());
             }
         });
@@ -216,13 +228,13 @@ public class FolderManagerFragment extends DialogFragment
             {
                 new MoveFolderDialog(folders, (parentID) ->
                 {
-                    for(int i=0;i<ids.size();i++)
+                    ArrayList<Integer> bannedIDs = getInbreedingFolders(
+                            AppDatabase.getInstance(getContext()).folderInterface().findFolderByID(parentID));
+
+                    for(int i=ids.size() - 1;i>=0;i--)
                     {
-                        if(ids.get(i) == parentID)
-                        {
+                        if(bannedIDs.contains(ids.get(i)))
                             ids.remove(i);
-                            break;
-                        }
                     }
 
                     AppDatabase.getInstance(getContext()).folderInterface().moveFolders(ids, parentID);
@@ -230,7 +242,9 @@ public class FolderManagerFragment extends DialogFragment
                     moreOptionsArea.transitionToStart();
                     isSelecting = false;
                     adapter.notifyDataSetChanged();
-                    callback.run();
+
+                    Toast.makeText(getContext(),
+                            "Some folders may not be moved since it contains the chosen folder", Toast.LENGTH_SHORT).show();
                 }).show(getActivity().getSupportFragmentManager(), "move folders");
             }
         });
@@ -251,6 +265,7 @@ public class FolderManagerFragment extends DialogFragment
                     return;
                 }
 
+                callback.run();
                 dismiss();
             }
         };
@@ -268,5 +283,19 @@ public class FolderManagerFragment extends DialogFragment
         }
 
         return ids;
+    }
+
+    private ArrayList<Integer> getInbreedingFolders(FolderEntity folder)
+    {
+        ArrayList<Integer> inBreedingFolders = new ArrayList<>();
+
+        while(folder.getId() != 0)
+        {
+            inBreedingFolders.add(folder.getId());
+            int parentID = folder.getParentID();
+            folder = AppDatabase.getInstance(getContext()).folderInterface().findFolderByID(parentID);
+        }
+
+        return inBreedingFolders;
     }
 }
