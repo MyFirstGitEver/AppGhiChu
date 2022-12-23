@@ -51,14 +51,12 @@ public class MoveFolderDialog extends DialogFragment
     {
         super.onViewCreated(view, savedInstanceState);
 
-        folders.add(new AnimatingFolderDTO(AppDatabase.getInstance(getContext())
-                .folderInterface().findFolderByID(0))); // adding main folder for consideration
-
         okBtn = view.findViewById(R.id.okBtn);
         dropdownList = view.findViewById(R.id.dropdownList);
 
         List<String> folderNames = new ArrayList<>();
 
+        folderNames.add("Thu muc chinh");
         for(AnimatingFolderDTO folder : folders)
             folderNames.add(folder.folder.getFolderName());
 
@@ -73,7 +71,13 @@ public class MoveFolderDialog extends DialogFragment
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int position, long l)
             {
-                folderIDMoveTo = folders.get(position).folder.getId();
+                if(position == 0)
+                {
+                    folderIDMoveTo = 0;
+                    return;
+                }
+
+                folderIDMoveTo = folders.get(position - 1).folder.getId();
             }
 
             @Override
