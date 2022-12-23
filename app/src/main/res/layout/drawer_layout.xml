@@ -30,7 +30,8 @@
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/allNoteBtn"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
+            android:textAlignment="viewStart"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:drawableLeft="@drawable/ic_note"
@@ -43,7 +44,8 @@
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/trashBtn"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
+            android:textAlignment="viewStart"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:drawableLeft="@drawable/ic_trash"
@@ -56,7 +58,8 @@
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/tagBtn"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
+            android:textAlignment="viewStart"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:drawableLeft="@drawable/ic_hashtag"
@@ -69,7 +72,8 @@
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/folderManagerBtn"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
+            android:textAlignment="viewStart"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:drawableLeft="@drawable/ic_folder"
