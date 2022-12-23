@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/round_bg"
+    android:backgroundTint="@color/gray">
+
+    <LinearLayout
+        android:id="@+id/linearLayout2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginVertical="10dp"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/redBtn"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginHorizontal="10dp"
+                android:background="@android:color/transparent"
+                app:srcCompat="@drawable/circle" />
+
+            <ImageButton
+                android:id="@+id/yellowBtn"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginHorizontal="10dp"
+                android:background="@android:color/transparent"
+                app:srcCompat="@drawable/circle"
+                app:tint="@color/yellow" />
+
+            <ImageButton
+                android:id="@+id/brownBtn"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginHorizontal="10dp"
+                android:background="@android:color/transparent"
+                app:srcCompat="@drawable/circle"
+                app:tint="@color/brown" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginVertical="10dp"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/blueBtn"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginHorizontal="10dp"
+                android:background="@android:color/transparent"
+                app:srcCompat="@drawable/circle"
+                app:tint="@android:color/holo_blue_dark" />
+
+            <ImageButton
+                android:id="@+id/grayBtn"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginHorizontal="10dp"
+                android:background="@android:color/transparent"
+                app:srcCompat="@drawable/circle"
+                app:tint="@android:color/darker_gray" />
+
+            <ImageButton
+                android:id="@+id/whiteBtn"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginHorizontal="10dp"
+                android:background="@android:color/transparent"
+                app:srcCompat="@drawable/circle"
+                app:tint="@color/white" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginVertical="10dp"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/purpleBtn"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginHorizontal="10dp"
+                android:background="@android:color/transparent"
+                app:srcCompat="@drawable/circle"
+                app:tint="@android:color/holo_purple" />
+
+            <ImageButton
+                android:id="@+id/greenBtn"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginHorizontal="10dp"
+                android:background="@android:color/transparent"
+                app:srcCompat="@drawable/circle"
+                app:tint="@android:color/holo_green_dark" />
+
+            <ImageButton
+                android:id="@+id/lightGrayBtn"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginHorizontal="10dp"
+                android:background="@android:color/transparent"
+                app:srcCompat="@drawable/circle"
+                app:tint="@color/lightgray" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/okBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:background="@android:color/transparent"
+        android:text="Xong"
+        android:textAllCaps="false"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/linearLayout2" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
