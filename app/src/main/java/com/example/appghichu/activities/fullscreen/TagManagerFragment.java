@@ -1,7 +1,6 @@
 package com.example.appghichu.activities.fullscreen;
 
 import android.app.Dialog;
-import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -11,22 +10,21 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
 
-import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.sqlite.db.SimpleSQLiteQuery;
 
 import com.example.appghichu.AppDatabase;
 import com.example.appghichu.R;
-import com.example.appghichu.Utils;
-import com.example.appghichu.activities.EditorActivity;
-import com.example.appghichu.activities.MainActivity;
 import com.example.appghichu.adapters.NoteListAdapter;
 import com.example.appghichu.adapters.TagListAdapter;
 import com.example.appghichu.interfaces.OnNoteClickListener;
+import com.example.appghichu.interfaces.SimpleCallBack;
+import com.example.appghichu.models.MainViewModel;
 import com.example.appghichu.objects.entities.NoteEntity;
 import com.example.appghichu.objects.entities.TagEntity;
 
@@ -38,23 +36,27 @@ public class TagManagerFragment extends DialogFragment
     private RecyclerView tagList, resultList;
     private ImageButton backBtn;
     private EditText searchEditTxt;
-    private ArrayList<TagEntity> tags = new ArrayList<>();
-    private TagListAdapter adapter;
 
     private boolean justModified;
-    private int currentFolderID;
+
+    private ArrayList<TagEntity> tags = new ArrayList<>();
+    private List<NoteEntity> notes;
+    private TagListAdapter tagAdapter;
+    private NoteListAdapter noteAdapter;
+    private MainViewModel model;
 
     private OnNoteClickListener listener;
+    private SimpleCallBack refreshListener;
 
     public TagManagerFragment()
     {
 
     }
 
-    public TagManagerFragment(OnNoteClickListener listener, int currentFolderID)
+    public TagManagerFragment(OnNoteClickListener listener, SimpleCallBack refreshListener)
     {
         this.listener = listener;
-        this.currentFolderID = currentFolderID;
+        this.refreshListener = refreshListener;
     }
 
     @Nullable
@@ -69,6 +71,23 @@ public class TagManagerFragment extends DialogFragment
     {
         super.onViewCreated(view, savedInstanceState);
 
+        model = new ViewModelProvider(getActivity()).get(MainViewModel.class);
+        notes = new ArrayList<>();
+        notes.add(null);
+
+        model.editorIntent.observe(getViewLifecycleOwner(), result ->
+        {
+            if(result == null)
+                return;
+
+            NoteEntity note = result.getParcelableExtra("note");
+
+            int index = result.getIntExtra("index", 0);
+            notes.set(index, note);
+            tagAdapter.notifyItemChanged(index);
+            model.editorIntent.setValue(null);
+        });
+
         tagList = view.findViewById(R.id.tagList);
         resultList = view.findViewById(R.id.resultList);
         searchEditTxt = view.findViewById(R.id.searchEditTxt);
@@ -77,12 +96,13 @@ public class TagManagerFragment extends DialogFragment
         backBtn.setOnClickListener((View v) -> dismiss());
 
         tagList.setLayoutManager(new LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false));
-        adapter = new TagListAdapter(tags, null, true, true);
-        adapter.notifyWhenTagsRemoved(() -> updateResultList());
-        tagList.setAdapter(adapter);
+        tagAdapter = new TagListAdapter(tags, null, true, true);
+        tagAdapter.notifyWhenTagsRemoved(() -> updateResultList());
+        tagList.setAdapter(tagAdapter);
 
         resultList.setLayoutManager(new LinearLayoutManager(getContext()));
-
+        noteAdapter = new NoteListAdapter(notes, listener, getContext(), "Không tìm thấy ghi chú nào!");
+        resultList.setAdapter(noteAdapter);
         searchEditTxt.addTextChangedListener(new TextWatcher()
         {
             @Override
@@ -113,7 +133,7 @@ public class TagManagerFragment extends DialogFragment
                     if(!tags.contains(searchTerm))
                     {
                         tags.add(new TagEntity(searchTerm));
-                        adapter.notifyItemInserted(tags.size() - 1);
+                        tagAdapter.notifyItemInserted(tags.size() - 1);
 
                         updateResultList();
                     }
@@ -133,9 +153,11 @@ public class TagManagerFragment extends DialogFragment
 
     public void updateResultList()
     {
+        notes.clear();
+
         if(tags.size() == 0)
         {
-            resultList.setAdapter(new NoteListAdapter(new ArrayList<>(), listener, getContext(), "Không tìm thấy ghi chú nào!"));
+            notes.add(null);
             return;
         }
 
@@ -163,15 +185,14 @@ public class TagManagerFragment extends DialogFragment
                 " INNER JOIN tag t ON n.id = t.noteId group by n.id) " +
                 "Where (" + condition + ")) n2 ON n1.id = n2.id;";
 
-
-        List<NoteEntity> notes =
-                AppDatabase.getInstance(getContext()).noteInterface().searchUsingTags(
+        notes = AppDatabase.getInstance(getContext()).noteInterface().searchUsingTags(
                         new SimpleSQLiteQuery(query, args));
+
 
         if(notes.size() == 0)
             notes.add(null);
 
-        resultList.setAdapter(new NoteListAdapter(notes, listener, getContext(), "Không tìm thấy ghi chú nào"));
+        noteAdapter.replaceList(notes);
     }
 
     @Override
