@@ -9,13 +9,15 @@ import androidx.room.TypeConverters;
 
 import com.example.appghichu.daos.FolderDAO;
 import com.example.appghichu.daos.NoteDAO;
+import com.example.appghichu.daos.RestoreDAO;
 import com.example.appghichu.daos.TagDAO;
 import com.example.appghichu.objects.entities.FolderEntity;
 import com.example.appghichu.objects.entities.NoteEntity;
+import com.example.appghichu.objects.entities.RestoreEntity;
 import com.example.appghichu.objects.entities.TagEntity;
 
 @TypeConverters({Converters.class})
-@Database(entities = {NoteEntity.class, FolderEntity.class, TagEntity.class}, version = 1)
+@Database(entities = {NoteEntity.class, FolderEntity.class, TagEntity.class, RestoreEntity.class}, version = 2)
 public abstract class AppDatabase extends RoomDatabase
 {
     private static final String DB_NAME = "app.db";
@@ -26,6 +28,7 @@ public abstract class AppDatabase extends RoomDatabase
         if(db == null)
         {
             db = Room.databaseBuilder(context.getApplicationContext(), AppDatabase.class, DB_NAME)
+                    .fallbackToDestructiveMigration()
                     .allowMainThreadQueries().build();
         }
 
@@ -35,4 +38,5 @@ public abstract class AppDatabase extends RoomDatabase
     public abstract NoteDAO noteInterface();
     public abstract FolderDAO folderInterface();
     public abstract TagDAO tagInterface();
+    public abstract RestoreDAO restoreInterface();
 }

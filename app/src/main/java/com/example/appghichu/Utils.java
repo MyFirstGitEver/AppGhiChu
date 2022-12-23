@@ -75,6 +75,32 @@ public class Utils
         builder.show();
     }
 
+    public static void showRestoreDialog(String message,
+                                         SimpleCallBack okListener,
+                                         SimpleCallBack restoreListener, Context context)
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+
+        builder
+                .setTitle(message)
+                .setPositiveButton("OK", new DialogInterface.OnClickListener()
+                {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i)
+                    {
+                        okListener.run();
+                    }
+                })
+                .setNegativeButton("RESTORE", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i)
+                    {
+                        restoreListener.run();
+                    }
+                });
+        builder.show();
+    }
+
     public static int dpToPx(int dp, Context context)
     {
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();

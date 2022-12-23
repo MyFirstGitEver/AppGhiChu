@@ -169,7 +169,7 @@ public class EditorActivity extends AppCompatActivity
                 public boolean onMenuItemClick(MenuItem menuItem)
                 {
                     if(menuItem.getTitle().equals("Xóa"))
-                        showDiscardDialog(getIntent().getIntExtra("noteID", 0));
+                        showDiscardDialog(getIntent().getParcelableExtra("note"));
                     else if(menuItem.getTitle().equals("Tạo tag"))
                     {
                         if(tags == null)
@@ -294,10 +294,10 @@ public class EditorActivity extends AppCompatActivity
             return;
         }
 
-        showDiscardDialog(getIntent().getIntExtra("noteID", 0));
+        showDiscardDialog(getIntent().getParcelableExtra("note"));
     }
 
-    private void showDiscardDialog(int noteID)
+    private void showDiscardDialog(NoteEntity note)
     {
         Utils.showConfirmDialog( "Bạn có muốn hủy ghi chú này?",() ->
         {
@@ -306,6 +306,8 @@ public class EditorActivity extends AppCompatActivity
             intent.putExtra("action", getIntent().getIntExtra("action", 0));
             intent.putExtra("id", noteID);
             setResult(Utils.DISCARD_NOTE, intent);
+
+            AppDatabase.getInstance(EditorActivity.this).restoreInterface().addNewRestore(note.getId(), note.getFolderID());
             finish();
         }, this);
     }

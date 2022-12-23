@@ -143,25 +143,39 @@ public class MainActivity extends AppCompatActivity
     {
         if(currentFolderID == -1)
         {
-            Utils.showConfirmDialog("Bạn có muốn vĩnh viễn xóa ghi chú này không ?", (() ->
-            {
-                File f = new File(getFilesDir(), "Note " + note.getId());
+            Utils.showRestoreDialog("Bạn có muốn vĩnh viễn xóa ghi chú này không ?",
+                    () ->
+                    {
+                        File f = new File(getFilesDir(), "Note " + note.getId());
 
-                try
-                {
-                    FileUtils.deleteDirectory(f);
-                    AppDatabase.getInstance(this).noteInterface().deleteNote(note);
-                }
-                catch (IOException e)
-                {
-                    Toast.makeText(this,
-                            "We can't delete this not for some reason!", Toast.LENGTH_SHORT).show();
-                    e.printStackTrace();
-                }
+                        try
+                        {
+                            FileUtils.deleteDirectory(f);
+                            AppDatabase.getInstance(this).noteInterface().deleteNote(note);
+                        }
+                        catch (IOException e)
+                        {
+                            Toast.makeText(this,
+                                    "We can't delete this not for some reason!", Toast.LENGTH_SHORT).show();
+                            e.printStackTrace();
+                        }
 
-                model.notes.remove(index);
-                noteListAdapter.notifyItemRemoved(index);
-            }),  this);
+                        model.notes.remove(index);
+                        noteListAdapter.notifyItemRemoved(index);
+                    },
+                    () ->
+                    {
+                        AppDatabase db = AppDatabase.getInstance(this);
+
+                        int lastFolderID =
+                            db.restoreInterface().getLastFolderID(note.getId());
+
+                        db.noteInterface().move(note.getId(), lastFolderID);
+                        db.restoreInterface().deleteRestore(note.getId());
+
+                        model.notes.remove(index);
+                        noteListAdapter.notifyItemRemoved(index);
+                    },  this);
             return;
         }
 
