@@ -219,7 +219,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onMoveToTagManager()
         {
-            new TagManagerFragment(searchNoteClickListener, () -> initFolderList())
+            new TagManagerFragment(searchNoteClickListener, () -> initNoteList())
                     .show(getSupportFragmentManager(), "tag manager");
         }
 

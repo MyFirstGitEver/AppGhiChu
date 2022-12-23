@@ -86,6 +86,9 @@ public class TagManagerFragment extends DialogFragment
             notes.set(index, note);
             tagAdapter.notifyItemChanged(index);
             model.editorIntent.setValue(null);
+
+            noteAdapter.notifyItemChanged(index);
+            refreshListener.run();
         });
 
         tagList = view.findViewById(R.id.tagList);
