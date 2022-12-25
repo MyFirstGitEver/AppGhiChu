@@ -20,3 +20,10 @@ Yêu cầu cài sẵn Android studio để chạy thử project.
 * annotationProcessor androidx.room:room-compiler:2.4.3
 
 # Cấu trúc project
+* Activities: package lưu các activity chính trong app. Ngoài ra, còn chứa các fragment 'toàn màn hình' hỗ trợ activity trong việc định hướng các trang tương tác.
+* Adapters: package lưu các adapter của recyclerView.
+* Dialogs : package chứa các pop-up dialog.
+* DAOS:  package chứa các lớp giao diện hỗ trợ truy vấn database
+* Models: package chứa các Viewmodel hỗ trợ tương tác activity-fragment
+* Objects: package chứa các data model chia làm ba loại: entity(object tượng trưng bảng trong SQLite), DTO(object chứa nội dung hiển th trong các recyclerViewị) và các object khác
+* Interfaces: Chứa các lớp giao diện như các callback hỗ trợ tương tác activity-fragment
