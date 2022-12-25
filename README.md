@@ -3,8 +3,10 @@
 App ghi chú lấy ý tưởng từ Samsung Note. App cho phép soạn ghi chú, truy vấn ghi chú, tạo thư mục và quản lý thư mục. App được xây dựng bằng framework Android SDK. Ngôn ngữ sử dụng: Java. 
 
 Database sử dụng: SQLite tích hợp sẵn trong hệ điều hành Android. App sử dụng library Room nhằm trừu tượng hóa quá trình truy vấn Database, giúp truy vấn dễ dàng và hiệu quả hơn.
+
 [Android SDK](https://vi.wikipedia.org/wiki/Android_SDK)
-[Room persistence library](https://developer.android.com/jetpack/androidx/releases/room?gclid=CjwKCAiAhqCdBhB0EiwAH8M_GjzT4z6HhmzL8AryB_FdWU30pwc8FMKZbVNATjKuI3RpH4d4pyLRwBoC0bwQAvD_BwE&gclsrc=aw.ds)
+
+[Room persistence library](https://developer.android.com/jetpack/androidx/releases/roomgclid=CjwKCAiAhqCdBhB0EiwAH8M_GjzT4z6HhmzL8AryB_FdWU30pwc8FMKZbVNATjKuI3RpH4d4pyLRwBoC0bwQAvD_BwE&gclsrc=aw.ds)
 
 # Hướng dẫn chạy project
 Yêu cầu cài sẵn Android studio để chạy thử project.
