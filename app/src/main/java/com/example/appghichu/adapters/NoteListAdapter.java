@@ -1,6 +1,7 @@
 package com.example.appghichu.adapters;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.text.Html;
@@ -16,6 +17,8 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.example.appghichu.AppDatabase;
 import com.example.appghichu.R;
 import com.example.appghichu.Utils;
@@ -23,6 +26,7 @@ import com.example.appghichu.interfaces.OnNoteClickListener;
 import com.example.appghichu.objects.entities.NoteEntity;
 import com.example.appghichu.objects.entities.TagEntity;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 

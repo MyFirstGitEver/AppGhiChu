@@ -21,15 +21,14 @@ public class SortNoteDialog extends DialogFragment
 {
     private AppCompatButton byDateBtn, byTitleBtn;
     private AppCompatButton increasingBtn, decreasingBtn;
-    private MainOptionListener listener;
 
     private Button okBtn;
 
     private boolean byDate = true, increasing = true;
 
-    public SortNoteDialog(MainOptionListener listener)
+    public SortNoteDialog()
     {
-        this.listener = listener;
+
     }
 
     @Nullable
@@ -57,36 +56,84 @@ public class SortNoteDialog extends DialogFragment
         decreasingBtn = view.findViewById(R.id.decreasingBtn);
         okBtn = view.findViewById(R.id.okBtn);
 
+        if(savedInstanceState != null)
+        {
+            byDate = savedInstanceState.getBoolean("byDate");
+            increasing = savedInstanceState.getBoolean("increasing");
+
+            increasingChanged();
+            byDateChanged();
+        }
+
         byDateBtn.setOnClickListener((View v) ->
         {
-            byDateBtn.setBackgroundResource(R.drawable.round_bg);
-            byTitleBtn.setBackgroundResource(R.drawable.transparent_round_bg);
             byDate = true;
+            byDateChanged();
         });
 
         byTitleBtn.setOnClickListener((View v) ->
         {
-            byDateBtn.setBackgroundResource(R.drawable.transparent_round_bg);
-            byTitleBtn.setBackgroundResource(R.drawable.round_bg);
             byDate = false;
+            byDateChanged();
         });
 
         increasingBtn.setOnClickListener((View v) ->
         {
-            increasingBtn.setBackgroundResource(R.drawable.round_bg);
-            decreasingBtn.setBackgroundResource(R.drawable.transparent_round_bg);
-
             increasing = true;
+            increasingChanged();
         });
 
         decreasingBtn.setOnClickListener((View v) ->
         {
-            decreasingBtn.setBackgroundResource(R.drawable.round_bg);
-            increasingBtn.setBackgroundResource(R.drawable.transparent_round_bg);
-
             increasing = false;
+            increasingChanged();
         });
 
-        okBtn.setOnClickListener((View v) -> listener.onSort(byDate, increasing));
+        okBtn.setOnClickListener((View v) ->
+        {
+            Bundle bundle = new Bundle();
+
+            bundle.putBoolean("byDate", byDate);
+            bundle.putBoolean("increasing", increasing);
+
+            getParentFragmentManager().setFragmentResult("sort command", bundle);
+        });
+    }
+
+    private void byDateChanged()
+    {
+        if(byDate)
+        {
+            byDateBtn.setBackgroundResource(R.drawable.round_bg);
+            byTitleBtn.setBackgroundResource(R.drawable.transparent_round_bg);
+        }
+        else
+        {
+            byDateBtn.setBackgroundResource(R.drawable.transparent_round_bg);
+            byTitleBtn.setBackgroundResource(R.drawable.round_bg);
+        }
+    }
+
+    private void increasingChanged()
+    {
+        if(increasing)
+        {
+            increasingBtn.setBackgroundResource(R.drawable.round_bg);
+            decreasingBtn.setBackgroundResource(R.drawable.transparent_round_bg);
+        }
+        else
+        {
+            decreasingBtn.setBackgroundResource(R.drawable.round_bg);
+            increasingBtn.setBackgroundResource(R.drawable.transparent_round_bg);
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState)
+    {
+        super.onSaveInstanceState(outState);
+
+        outState.putBoolean("byDate", byDate);
+        outState.putBoolean("increasing", increasing);
     }
 }

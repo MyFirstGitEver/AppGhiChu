@@ -18,11 +18,10 @@ public class AddFolderDialog extends DialogFragment
 {
     private EditText folderNameEditTxt;
     private Button okBtn;
-    private MainOptionListener listener;
 
-    public AddFolderDialog(MainOptionListener listener)
+    public AddFolderDialog()
     {
-        this.listener = listener;
+
     }
 
     @Nullable
@@ -47,7 +46,9 @@ public class AddFolderDialog extends DialogFragment
             if(folderName.equals(""))
                 return;
 
-            listener.onCreateNewFolder(folderName);
+            Bundle bundle = new Bundle();
+            bundle.putString("new", folderName);
+            getParentFragmentManager().setFragmentResult("new folder", bundle);
             dismiss();
         });
     }

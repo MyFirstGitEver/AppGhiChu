@@ -13,6 +13,7 @@ import android.widget.ImageButton;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -25,6 +26,7 @@ import com.example.appghichu.adapters.TagListAdapter;
 import com.example.appghichu.interfaces.OnNoteClickListener;
 import com.example.appghichu.interfaces.SimpleCallBack;
 import com.example.appghichu.models.MainViewModel;
+import com.example.appghichu.models.TagManagerViewModel;
 import com.example.appghichu.objects.entities.NoteEntity;
 import com.example.appghichu.objects.entities.TagEntity;
 
@@ -39,24 +41,12 @@ public class TagManagerFragment extends DialogFragment
 
     private boolean justModified;
 
-    private ArrayList<TagEntity> tags = new ArrayList<>();
-    private List<NoteEntity> notes;
-    private TagListAdapter tagAdapter;
-    private NoteListAdapter noteAdapter;
     private MainViewModel model;
-
-    private OnNoteClickListener listener;
-    private SimpleCallBack refreshListener;
+    private TagManagerViewModel tagManagerViewModel;
 
     public TagManagerFragment()
     {
 
-    }
-
-    public TagManagerFragment(OnNoteClickListener listener, SimpleCallBack refreshListener)
-    {
-        this.listener = listener;
-        this.refreshListener = refreshListener;
     }
 
     @Nullable
@@ -72,8 +62,7 @@ public class TagManagerFragment extends DialogFragment
         super.onViewCreated(view, savedInstanceState);
 
         model = new ViewModelProvider(getActivity()).get(MainViewModel.class);
-        notes = new ArrayList<>();
-        notes.add(null);
+        tagManagerViewModel = new ViewModelProvider(this).get(TagManagerViewModel.class);
 
         model.editorIntent.observe(getViewLifecycleOwner(), result ->
         {
@@ -83,12 +72,38 @@ public class TagManagerFragment extends DialogFragment
             NoteEntity note = result.getParcelableExtra("note");
 
             int index = result.getIntExtra("index", 0);
-            notes.set(index, note);
-            tagAdapter.notifyItemChanged(index);
-            model.editorIntent.setValue(null);
 
-            noteAdapter.notifyItemChanged(index);
-            refreshListener.run();
+            tagManagerViewModel.changeNoteAt(index, note);
+            resultList.getAdapter().notifyItemChanged(index);
+
+            getParentFragmentManager().setFragmentResult("refresh", null);
+            model.editorIntent.setValue(null);
+        });
+
+        tagManagerViewModel.observeTags().observe(getViewLifecycleOwner(), new Observer<List<TagEntity>>()
+        {
+            @Override
+            public void onChanged(List<TagEntity> tags)
+            {
+                TagListAdapter adapter = new TagListAdapter(tags, getContext(), true, true);
+                adapter.notifyWhenTagsRemoved(() -> updateResultList());
+                tagList.setAdapter(adapter);
+            }
+        });
+
+        tagManagerViewModel.observeNotes().observe(getViewLifecycleOwner(), new Observer<List<NoteEntity>>() {
+            @Override
+            public void onChanged(List<NoteEntity> notes)
+            {
+                resultList.setAdapter(new NoteListAdapter(notes, (note, index) ->
+                {
+                    Bundle bundle = new Bundle();
+                    bundle.putParcelable("note", note);
+                    bundle.putInt("index", index);
+
+                    getParentFragmentManager().setFragmentResult("note clicked", bundle);
+                }, getContext(), "Không tìm được ghi chú nào cả :("));
+            }
         });
 
         tagList = view.findViewById(R.id.tagList);
@@ -99,13 +114,8 @@ public class TagManagerFragment extends DialogFragment
         backBtn.setOnClickListener((View v) -> dismiss());
 
         tagList.setLayoutManager(new LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false));
-        tagAdapter = new TagListAdapter(tags, null, true, true);
-        tagAdapter.notifyWhenTagsRemoved(() -> updateResultList());
-        tagList.setAdapter(tagAdapter);
-
         resultList.setLayoutManager(new LinearLayoutManager(getContext()));
-        noteAdapter = new NoteListAdapter(notes, listener, getContext(), "Không tìm thấy ghi chú nào!");
-        resultList.setAdapter(noteAdapter);
+
         searchEditTxt.addTextChangedListener(new TextWatcher()
         {
             @Override
@@ -133,10 +143,10 @@ public class TagManagerFragment extends DialogFragment
                     String searchTerm = charSequence.toString();
                     searchTerm = searchTerm.substring(0, searchTerm.length() - 2);
 
-                    if(!tags.contains(searchTerm))
+                    if(!tagManagerViewModel.contains(searchTerm))
                     {
-                        tags.add(new TagEntity(searchTerm));
-                        tagAdapter.notifyItemInserted(tags.size() - 1);
+                        tagManagerViewModel.insertNewTag(new TagEntity(searchTerm));
+                        tagList.getAdapter().notifyItemInserted(tagManagerViewModel.getLastPosition());
 
                         updateResultList();
                     }
@@ -156,46 +166,46 @@ public class TagManagerFragment extends DialogFragment
 
     public void updateResultList()
     {
-        notes.clear();
-
-        if(tags.size() == 0)
+        if(tagManagerViewModel.getLastPosition() == -1)
         {
-            notes.add(null);
+            List<NoteEntity> result = new ArrayList<>();
+            result.add(null);
+            tagManagerViewModel.updateResult(result);
+
             return;
         }
 
         StringBuilder condition = new StringBuilder();
 
-        if(tags.size() == 1)
+        if(tagManagerViewModel.getLastPosition() == 0)
             condition.append("_group LIKE ?");
         else
         {
-            for(int j=0;j<tags.size();j++)
+            for(int j=0;j<=tagManagerViewModel.getLastPosition();j++)
             {
-                if(j == tags.size() - 1)
+                if(j == tagManagerViewModel.getLastPosition())
                     condition.append("_group LIKE ?");
                 else
                     condition.append("_group LIKE ? AND ");
             }
         }
 
-        String[] args = new String[tags.size()];
+        String[] args = new String[tagManagerViewModel.getLastPosition() + 1];
 
         for(int j=0;j<args.length;j++)
-            args[j] = '%' + tags.get(j).getTagName() + '%';
+            args[j] = '%' + tagManagerViewModel.tagAt(j).getTagName() + '%';
 
         String query = "Select * from note n1 INNER JOIN(Select id from (Select n.id, group_concat(t.tagName) as _group from note n" +
                 " INNER JOIN tag t ON n.id = t.noteId group by n.id) " +
                 "Where (" + condition + ")) n2 ON n1.id = n2.id;";
 
-        notes = AppDatabase.getInstance(getContext()).noteInterface().searchUsingTags(
+        List<NoteEntity> notes = AppDatabase.getInstance(getContext()).noteInterface().searchUsingTags(
                         new SimpleSQLiteQuery(query, args));
-
 
         if(notes.size() == 0)
             notes.add(null);
 
-        noteAdapter.replaceList(notes);
+        tagManagerViewModel.updateResult(notes);
     }
 
     @Override

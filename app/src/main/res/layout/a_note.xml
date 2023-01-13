@@ -13,12 +13,11 @@
     <ImageView
         android:id="@+id/previewImg"
         android:layout_width="150dp"
-        android:layout_height="200dp"
+        android:layout_height="250dp"
         android:layout_marginStart="10dp"
         android:layout_marginTop="10dp"
         android:background="@drawable/border_bg"
         android:padding="10dp"
-        android:scaleType="fitXY"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:srcCompat="@tools:sample/avatars" />

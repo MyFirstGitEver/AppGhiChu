@@ -52,23 +52,16 @@ public class SearchFragment extends DialogFragment
     private EditText searchEditTxt;
     private RecyclerView noteList;
 
+    private MainViewModel model;
+
     private NoteListAdapter adapter;
     private List<NoteEntity> notes;
     private List<String> realTitles;
     private int searchMode = BY_CONTENT;
 
-    private OnNoteClickListener listener;
-    private SimpleCallBack refreshListener;
-
     public SearchFragment()
     {
 
-    }
-
-    public SearchFragment(OnNoteClickListener listener, SimpleCallBack refreshListener)
-    {
-        this.listener = listener;
-        this.refreshListener = refreshListener;
     }
 
     @Override
@@ -99,7 +92,7 @@ public class SearchFragment extends DialogFragment
             public void onBackPressed()
             {
                 dismiss();
-                refreshListener.run();
+                getParentFragmentManager().setFragmentResult("refresh", null);
             }
         };
     }
@@ -116,7 +109,7 @@ public class SearchFragment extends DialogFragment
     {
         super.onViewCreated(view, savedInstanceState);
 
-        MainViewModel model = new ViewModelProvider(getActivity()).get(MainViewModel.class);
+        model = new ViewModelProvider(getActivity()).get(MainViewModel.class);
 
         model.editorIntent.observe(getViewLifecycleOwner(), result ->
         {
@@ -147,7 +140,11 @@ public class SearchFragment extends DialogFragment
                     if(index < realTitles.size())
                         note.setTitle(realTitles.get(index));
 
-                    listener.onNoteClick(note, index);
+                    Bundle bundle = new Bundle();
+                    bundle.putParcelable("note", note);
+                    bundle.putInt("index", index);
+
+                    getParentFragmentManager().setFragmentResult("note clicked", bundle);
                 }, getContext(), "Không tìm thấy ghi chú :(");
         noteList.setAdapter(adapter);
 
@@ -197,7 +194,7 @@ public class SearchFragment extends DialogFragment
         backBtn.setOnClickListener((View v) ->
         {
             dismiss();
-            refreshListener.run();
+            getParentFragmentManager().setFragmentResult("refresh", null);
         });
     }
 

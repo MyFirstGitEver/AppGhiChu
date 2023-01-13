@@ -2,7 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="300dp"
+    android:layout_width="wrap_content"
     android:layout_height="match_parent">
 
     <TextView
@@ -25,19 +25,20 @@
         android:orientation="vertical"
         android:padding="10dp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/folderTxt">
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/allNoteBtn"
             android:layout_width="match_parent"
-            android:textAlignment="viewStart"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:drawableLeft="@drawable/ic_note"
             android:drawablePadding="10dp"
             android:foreground="?attr/selectableItemBackground"
             android:text="Thư mục chính"
+            android:textAlignment="viewStart"
             android:textAllCaps="false"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -45,13 +46,13 @@
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/trashBtn"
             android:layout_width="match_parent"
-            android:textAlignment="viewStart"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:drawableLeft="@drawable/ic_trash"
             android:drawablePadding="10dp"
             android:foreground="?attr/selectableItemBackground"
             android:text="Thùng rác"
+            android:textAlignment="viewStart"
             android:textAllCaps="false"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -59,13 +60,13 @@
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/tagBtn"
             android:layout_width="match_parent"
-            android:textAlignment="viewStart"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:drawableLeft="@drawable/ic_hashtag"
             android:drawablePadding="10dp"
             android:foreground="?attr/selectableItemBackground"
             android:text="Tất cả tag"
+            android:textAlignment="viewStart"
             android:textAllCaps="false"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -73,13 +74,13 @@
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/folderManagerBtn"
             android:layout_width="match_parent"
-            android:textAlignment="viewStart"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:drawableLeft="@drawable/ic_folder"
             android:drawablePadding="10dp"
-            android:text="Quản lý thư mục"
             android:foreground="?attr/selectableItemBackground"
+            android:text="Quản lý thư mục"
+            android:textAlignment="viewStart"
             android:textAllCaps="false"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />

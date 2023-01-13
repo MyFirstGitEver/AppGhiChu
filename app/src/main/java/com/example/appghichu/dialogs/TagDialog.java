@@ -26,13 +26,11 @@ public class TagDialog extends DialogFragment
     private RecyclerView tagList;
     private EditText tagNameEditTxt;
 
-    private TagListAdapter adapter;
     private List<TagEntity> tags;
 
-    public TagDialog(int noteID, List<TagEntity> tags)
+    public TagDialog()
     {
-        this.noteID = noteID;
-        this.tags = tags;
+
     }
 
     @Nullable
@@ -47,6 +45,9 @@ public class TagDialog extends DialogFragment
     {
         super.onViewCreated(view, savedInstanceState);
 
+        noteID = getArguments().getInt("noteId");
+        tags = getArguments().getParcelableArrayList("tags");
+
         saveBtn = view.findViewById(R.id.saveBtn);
         addBtn = view.findViewById(R.id.addBtn);
 
@@ -54,8 +55,7 @@ public class TagDialog extends DialogFragment
         tagNameEditTxt = view.findViewById(R.id.tagNameEditTxt);
 
         tagList.setLayoutManager(new GridLayoutManager(getContext(), 2));
-        adapter = new TagListAdapter(tags, getContext(), true, false);
-        tagList.setAdapter(adapter);
+        tagList.setAdapter(new TagListAdapter(tags, getContext(), true, false));
 
         addBtn.setOnClickListener((View v) ->
         {
@@ -73,7 +73,7 @@ public class TagDialog extends DialogFragment
             }
 
             tags.add(new TagEntity(noteID, tagName));
-            adapter.notifyItemInserted(tags.size() - 1);
+            tagList.getAdapter().notifyItemInserted(tags.size() - 1);
         });
 
         saveBtn.setOnClickListener((View v) -> dismiss());

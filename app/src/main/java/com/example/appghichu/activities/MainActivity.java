@@ -2,9 +2,12 @@ package com.example.appghichu.activities;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.FragmentResultListener;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -60,7 +63,6 @@ public class MainActivity extends AppCompatActivity
     private int noteCounter = 1, currentFolderID = 0;
 
     private MainViewModel model;
-    private NoteListAdapter noteListAdapter;
     private FolderListAdapter folderListAdapter;
 
     private final ActivityResultLauncher<Intent> mainLauncher = registerForActivityResult(
@@ -81,8 +83,8 @@ public class MainActivity extends AppCompatActivity
                     int id = result.getData().getIntExtra("id", 0);
                     int index = result.getData().getIntExtra("index", 0);
                     AppDatabase.getInstance(this).noteInterface().move(id, -1);
-                    model.notes.remove(index);
-                    noteListAdapter.notifyItemRemoved(index);
+                    model.removeNoteAt(index);
+                    noteList.getAdapter().notifyItemRemoved(index);
 
                     return;
                 }
@@ -99,22 +101,22 @@ public class MainActivity extends AppCompatActivity
 
                     if(code == Utils.OPEN_FOR_ADD_NEW)
                     {
-                        if(model.notes.size() == 1 && model.notes.get(0) == null)
+                        if(model.showingEmptyMessage())
                         {
-                            model.notes.remove(0); // remove empty message!
-                            noteListAdapter.notifyItemRemoved(0);
+                            model.removeNoteAt(0); // remove empty message!
+                            noteList.getAdapter().notifyItemRemoved(0);
                         }
 
-                        model.notes.add(note);
-                        noteListAdapter.notifyItemInserted(model.notes.size() - 1);
+                        model.insertNewNote(note);
+                        noteList.getAdapter().notifyItemInserted(model.getLastPosition());
                         note.setFolderID(currentFolderID);
                         noteCounter++;
                     }
                     else
                     {
                         int index = result.getData().getIntExtra("index", 0);
-                        model.notes.set(index, note);
-                        noteListAdapter.notifyItemChanged(index);
+                        model.changeNoteAt(index, note);
+                        noteList.getAdapter().notifyItemChanged(index);
                     }
                 }
             });
@@ -160,8 +162,8 @@ public class MainActivity extends AppCompatActivity
                             e.printStackTrace();
                         }
 
-                        model.notes.remove(index);
-                        noteListAdapter.notifyItemRemoved(index);
+                        model.removeNoteAt(index);
+                        noteList.getAdapter().notifyItemRemoved(index);
                     },
                     () ->
                     {
@@ -173,8 +175,8 @@ public class MainActivity extends AppCompatActivity
                         db.noteInterface().move(note.getId(), lastFolderID);
                         db.restoreInterface().deleteRestore(note.getId());
 
-                        model.notes.remove(index);
-                        noteListAdapter.notifyItemRemoved(index);
+                        model.removeNoteAt(index);
+                        noteList.getAdapter().notifyItemRemoved(index);
                     },  this);
             return;
         }
@@ -189,7 +191,7 @@ public class MainActivity extends AppCompatActivity
         mainLauncher.launch(intent);
     };
 
-    private DrawerListener drawerListener = new DrawerListener()
+    private final DrawerListener drawerListener = new DrawerListener()
     {
         @Override
         public void onMoveToFolder(int folderID)
@@ -233,27 +235,14 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onMoveToTagManager()
         {
-            new TagManagerFragment(searchNoteClickListener, () -> initNoteList())
+            new TagManagerFragment()
                     .show(getSupportFragmentManager(), "tag manager");
         }
 
         @Override
         public void onMoveToFolderManager()
         {
-            new FolderManagerFragment(() ->
-            {
-                FolderEntity folder = AppDatabase.getInstance(MainActivity.this).folderInterface()
-                        .findFolderByID(currentFolderID);
-
-                if(folder != null)
-                {
-                    folderTxt.setText(folder.getFolderName());
-                    initFolderList();
-                }
-                else
-                    onMoveToFolder(0);
-
-            }).show(getSupportFragmentManager(), "folder manager");
+            new FolderManagerFragment().show(getSupportFragmentManager(), "folder manager");
         }
     };
 
@@ -288,28 +277,11 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onSort(boolean byDate, boolean increasing)
         {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
-            {
-                model.notes.sort(new Comparator<NoteEntity>()
-                {
-                    @Override
-                    public int compare(NoteEntity n1, NoteEntity n2)
-                    {
-                        int result;
-                        if(byDate)
-                            result = n1.getCreationDate().compareTo(n2.getCreationDate());
-                        else
-                            result = n1.getTitle().compareTo(n2.getTitle());
-
-                        if(!increasing)
-                            return -result;
-
-                        return result;
-                    }
-                });
-
-                noteListAdapter.notifyDataSetChanged();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                model.sort(byDate, increasing);
             }
+
+            noteList.getAdapter().notifyDataSetChanged();
         }
     };
 
@@ -338,8 +310,24 @@ public class MainActivity extends AppCompatActivity
 
         getCurrentFolder();
         initDrawerOptionsHandler();
-        initNoteList();
         initFolderList();
+
+        model.observeNoteList().observe(this, new Observer<ArrayList<NoteEntity>>()
+        {
+            @Override
+            public void onChanged(ArrayList<NoteEntity> notes)
+            {
+                if(notes == null)
+                    initNoteList();
+                else
+                    noteList.setAdapter(new NoteListAdapter(
+                            notes,
+                            mainNoteClickListener,
+                            MainActivity.this, "Hiện chưa có ghi chú nào!"));
+            }
+        });
+
+        noteList.setLayoutManager(new LinearLayoutManager(this));
 
         addBtn.setOnClickListener((View v) ->
         {
@@ -361,9 +349,9 @@ public class MainActivity extends AppCompatActivity
                 public boolean onMenuItemClick(MenuItem menuItem)
                 {
                     if(menuItem.getTitle().equals("Tạo thư mục"))
-                        new AddFolderDialog(mainOptionListener).show(getSupportFragmentManager(), "add");
+                        new AddFolderDialog().show(getSupportFragmentManager(), "add");
                     else if(menuItem.getTitle().equals("Sắp xếp"))
-                        new SortNoteDialog(mainOptionListener).show(getSupportFragmentManager(), "sort");
+                        new SortNoteDialog().show(getSupportFragmentManager(), "sort");
 
                     return false;
                 }
@@ -372,7 +360,73 @@ public class MainActivity extends AppCompatActivity
         });
 
         searchBtn.setOnClickListener((View v) ->
-            new SearchFragment(searchNoteClickListener, () -> initNoteList()).show(getSupportFragmentManager(), "search"));
+            new SearchFragment().show(getSupportFragmentManager(), "search"));
+
+        getSupportFragmentManager().setFragmentResultListener("refresh", this, new FragmentResultListener()
+        {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result)
+            {
+                initNoteList();
+            }
+        });
+
+        getSupportFragmentManager().setFragmentResultListener("note clicked", this, new FragmentResultListener()
+        {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result)
+            {
+                NoteEntity note = result.getParcelable("note");
+                int index = result.getInt("index");
+
+                searchNoteClickListener.onNoteClick(note, index);
+            }
+        });
+
+        getSupportFragmentManager().setFragmentResultListener("folder refresh", this, new FragmentResultListener() {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result)
+            {
+                FolderEntity folder = AppDatabase.getInstance(MainActivity.this).folderInterface()
+                        .findFolderByID(currentFolderID);
+
+                if(folder != null)
+                {
+                    folderTxt.setText(folder.getFolderName());
+                    initFolderList();
+                }
+                else
+                    drawerListener.onMoveToFolder(0);
+            }
+        });
+
+        getSupportFragmentManager().setFragmentResultListener("new folder", this, new FragmentResultListener()
+        {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result)
+            {
+                String folderName = result.getString("new");
+                mainOptionListener.onCreateNewFolder(folderName);
+            }
+        });
+
+        getSupportFragmentManager().setFragmentResultListener("new folder", this, new FragmentResultListener()
+        {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result)
+            {
+                String folderName = result.getString("new");
+                mainOptionListener.onCreateNewFolder(folderName);
+            }
+        });
+
+        getSupportFragmentManager().setFragmentResultListener("sort command", this, new FragmentResultListener() {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result)
+            {
+                mainOptionListener.onSort(result.getBoolean("byDate"), result.getBoolean("increasing"));
+            }
+        });
     }
 
     private void initFolderList()
@@ -415,17 +469,14 @@ public class MainActivity extends AppCompatActivity
 
     private void initNoteList()
     {
-        model.notes = (ArrayList<NoteEntity>) AppDatabase.getInstance(this).noteInterface().getAllNotesInFolder(currentFolderID);
+        List<NoteEntity> notes = AppDatabase.getInstance(this).noteInterface().getAllNotesInFolder(currentFolderID);
 
-        if(model.notes.size() == 0)
-            model.notes.add(null);
+        model.initNoteList((ArrayList<NoteEntity>) notes);
+
+        if(model.getLastPosition() == -1)
+            model.insertNewNote(null);
 
         noteCounter = AppDatabase.getInstance(this).noteInterface().getCurrentNoteID() + 1;
-
-        noteListAdapter = new NoteListAdapter(model.notes, mainNoteClickListener, this, "Hiện chưa có ghi chú nào");
-
-        noteList.setAdapter(noteListAdapter);
-        noteList.setLayoutManager(new LinearLayoutManager(this));
     }
 
     private void initDrawerOptionsHandler()

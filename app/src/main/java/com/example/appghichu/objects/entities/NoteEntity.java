@@ -15,8 +15,7 @@ import java.util.Date;
         foreignKeys = {
                 @ForeignKey(entity = FolderEntity.class, parentColumns = "id", childColumns = "folderID", onDelete = ForeignKey.CASCADE)
         },
-        indices = {@Index(name = "folderIndex", value = "folderID")}
-)
+        indices = {@Index(name = "folderIndex", value = "folderID")})
 public class NoteEntity implements Parcelable
 {
     public static final int EMPTY = 0;

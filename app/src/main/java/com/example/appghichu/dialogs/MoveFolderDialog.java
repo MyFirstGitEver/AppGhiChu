@@ -28,15 +28,11 @@ public class MoveFolderDialog extends DialogFragment
     private Button okBtn;
     private Spinner dropdownList;
 
-    private List<AnimatingFolderDTO> folders;
+    private List<FolderEntity> folders;
 
-    private int folderIDMoveTo;
-    private OnMoveFoldersListener callback;
-
-    public MoveFolderDialog(List<AnimatingFolderDTO> folders, OnMoveFoldersListener callback)
+    public MoveFolderDialog()
     {
-        this.folders = folders;
-        this.callback = callback;
+
     }
 
     @Nullable
@@ -57,8 +53,11 @@ public class MoveFolderDialog extends DialogFragment
         List<String> folderNames = new ArrayList<>();
 
         folderNames.add("Thu muc chinh");
-        for(AnimatingFolderDTO folder : folders)
-            folderNames.add(folder.folder.getFolderName());
+
+        folders = AppDatabase.getInstance(getContext()).folderInterface().listAllFoldersUnderManagement();
+
+        for(FolderEntity folder : folders)
+            folderNames.add(folder.getFolderName());
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(getContext(),
                 android.R.layout.simple_spinner_item, folderNames);
@@ -66,30 +65,31 @@ public class MoveFolderDialog extends DialogFragment
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         dropdownList.setAdapter(adapter);
         dropdownList.setSelection(0);
-        dropdownList.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener()
-        {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int position, long l)
-            {
-                if(position == 0)
-                {
-                    folderIDMoveTo = 0;
-                    return;
-                }
-
-                folderIDMoveTo = folders.get(position - 1).folder.getId();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView)
-            {
-
-            }
-        });
 
         okBtn.setOnClickListener((View v) ->
         {
-            callback.onMoveFolders(folderIDMoveTo);
+            int folderIDMoveTo;
+
+            if(dropdownList.getSelectedItemPosition() == 0)
+                folderIDMoveTo = 0;
+            else
+                folderIDMoveTo = folders.get(dropdownList.getSelectedItemPosition() - 1).getId();
+
+            if(!getArguments().getBoolean("multiple"))
+            {
+                Bundle bundle = new Bundle();
+                bundle.putInt("id", folderIDMoveTo);
+                bundle.putInt("folderId", getArguments().getInt("folderId"));
+
+                getParentFragmentManager().setFragmentResult("move", bundle);
+            }
+            else
+            {
+                Bundle bundle = new Bundle();
+                bundle.putInt("id", folderIDMoveTo);
+
+                getParentFragmentManager().setFragmentResult("move multiple", bundle);
+            }
             dismiss();
         });
     }

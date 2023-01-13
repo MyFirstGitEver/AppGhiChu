@@ -26,14 +26,9 @@ public class RenameFolderDialog extends DialogFragment
     private Button okBtn;
     private TextView titleTxt;
 
-    private int id;
-
-    private RenameFolderListener listener;
-
-    public RenameFolderDialog(int id, RenameFolderListener listener)
+    public RenameFolderDialog()
     {
-        this.id = id;
-        this.listener = listener;
+
     }
 
     @Nullable
@@ -63,8 +58,13 @@ public class RenameFolderDialog extends DialogFragment
 
             if(folderInterface.checkIfFolderAlreadyExists(folderName) == 0)
             {
-                folderInterface.renameFolder(folderName, id);
-                listener.onRenameDone(folderName);
+                folderInterface.renameFolder(folderName, getArguments().getInt("id"));
+
+                Bundle bundle = new Bundle();
+                bundle.putString("folderName", folderName);
+                bundle.putInt("index", getArguments().getInt("index"));
+
+                getParentFragmentManager().setFragmentResult("rename", bundle);
                 dismiss();
             }
             else

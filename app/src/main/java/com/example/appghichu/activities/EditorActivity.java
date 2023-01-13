@@ -3,6 +3,7 @@ package com.example.appghichu.activities;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.motion.widget.MotionLayout;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -32,6 +33,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
@@ -43,16 +45,12 @@ import com.example.appghichu.Utils;
 import com.example.appghichu.adapters.NotePageListAdapter;
 import com.example.appghichu.dialogs.TagDialog;
 import com.example.appghichu.interfaces.NotePageListener;
-import com.example.appghichu.interfaces.SimpleCallBack;
 import com.example.appghichu.models.EditorViewModel;
-import com.example.appghichu.objects.PaintStep;
 import com.example.appghichu.objects.entities.NoteEntity;
 import com.example.appghichu.objects.dtos.NotePageDTO;
 import com.example.appghichu.objects.MyCanvas;
 import com.example.appghichu.R;
 import com.example.appghichu.objects.entities.TagEntity;
-
-import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -69,18 +67,82 @@ public class EditorActivity extends AppCompatActivity
             boldBtn, italicBtn, penBtn, eraseBtn, drawerBtn, colorBtn, moreBtn, revertBtn, backBtn, lastBtn;
     private LinearLayout drawerOptions;
     private MotionLayout toolArea;
+    private FrameLayout mainContent;
     private EditText titleEditTxt, limitEditTxt;
     private RecyclerView notePageList;
 
     private PopupWindow window;
-    private NotePageListAdapter notePageListAdapter;
     private EditorViewModel model;
 
     private boolean isUsingDrawer, isUsingTool = true;
-    private int mode = MyCanvas.DRAW, currentColor = Color.RED, canvasWidth, canvasHeight, noteID;
+    private int mode = MyCanvas.DRAW, currentColor = Color.RED, canvasWidth, canvasHeight;
     private File noteFolder;
 
-    private List<TagEntity> tags;
+    private final NotePageListener notePageListener = new NotePageListener()
+    {
+        @Override
+        public void notifyCanvasSize(int width, int height)
+        {
+            canvasWidth = width;
+            canvasHeight = height;
+        }
+
+        @Override
+        public void onPageFocus(int currentPageIndex)
+        {
+            toolArea.setVisibility(View.VISIBLE);
+            isUsingTool = true;
+
+            if(currentPageIndex == model.getLastPosition())
+            {
+                model.insertNewPage(new NotePageDTO(null, "", 20));
+                ((NotePageListAdapter)notePageList.getAdapter()).notifyItemInserted(model.getLastPosition());
+
+                for(int i=0;i<model.getLastPosition();i++)
+                    ((NotePageListAdapter)notePageList.getAdapter())
+                            .notifyItemChanged(i, NotePageListAdapter.INDEXING); // re-index!
+            }
+        }
+
+        @Override
+        public boolean isUsingPen()
+        {
+            return lastBtn == penBtn;
+        }
+
+        @Override
+        public int getMode()
+        {
+            return mode;
+        }
+
+        @Override
+        public int getColor()
+        {
+            return currentColor;
+        }
+
+        @Override
+        public boolean checkLineLimit(String html)
+        {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+            {
+                limitEditTxt.setText(Html.fromHtml(html, Html.FROM_HTML_MODE_COMPACT));
+                int count = limitEditTxt.getLineCount();
+
+                int lines = (int)((double)
+                        Utils.dpToPx(400, EditorActivity.this) / limitEditTxt.getLineHeight());
+
+                Log.d("max", lines + "");
+                Log.d("lineCount", count + "");
+                return (lines <= count);
+            }
+
+            return false;
+        }
+
+
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -88,10 +150,8 @@ public class EditorActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
 
-        noteID = getIntent().getIntExtra("noteID", 0);
-
         model = new ViewModelProvider(this).get(EditorViewModel.class);
-        noteFolder = new File(getFilesDir(), "Note " + noteID);
+        noteFolder = new File(getFilesDir(), "Note " + getIntent().getIntExtra("noteID", 0));
         noteFolder.mkdir();
 
         boldBtn = findViewById(R.id.boldBtn);
@@ -106,16 +166,37 @@ public class EditorActivity extends AppCompatActivity
         revertBtn = findViewById(R.id.revertBtn);
         backBtn = findViewById(R.id.backBtn);
         limitEditTxt = findViewById(R.id.limitEditTxt);
+        mainContent = findViewById(R.id.mainContent);
+        mainContent = findViewById(R.id.mainContent);
 
         titleEditTxt = findViewById(R.id.titleEditTxt);
 
         notePageList = findViewById(R.id.notePageList);
-        
-        prepare();
-        initNotPageList();
 
-        boldBtn.setOnClickListener((View v) -> notePageListAdapter.alterCurrentPageBold());
-        italicBtn.setOnClickListener((View v) -> notePageListAdapter.alterCurrentPageItalic());
+        model.observePages().observe(this, new Observer<ArrayList<NotePageDTO>>() {
+            @Override
+            public void onChanged(ArrayList<NotePageDTO> pages)
+            {
+                if(pages == null)
+                    model.initPages((ArrayList<NotePageDTO>) fetch());
+                else
+                    notePageList.setAdapter(
+                            new NotePageListAdapter(pages, notePageListener, EditorActivity.this, getVerticalWidth()));
+            }
+        });
+
+        LinearLayoutManager manager = new LinearLayoutManager(this)
+        {
+            @Override
+            public boolean canScrollVertically()
+            {
+                return lastBtn == penBtn;
+            }
+        };
+        notePageList.setLayoutManager(manager);
+
+        boldBtn.setOnClickListener((View v) -> ((NotePageListAdapter)notePageList.getAdapter()).alterCurrentPageBold());
+        italicBtn.setOnClickListener((View v) -> ((NotePageListAdapter)notePageList.getAdapter()).alterCurrentPageItalic());
         
         colorBtn.setOnClickListener((View v) ->
         {
@@ -168,14 +249,20 @@ public class EditorActivity extends AppCompatActivity
                 @Override
                 public boolean onMenuItemClick(MenuItem menuItem)
                 {
+                    int noteID =  getIntent().getIntExtra("noteID", 0);
+
                     if(menuItem.getTitle().equals("Xóa"))
                         showDiscardDialog(getIntent().getParcelableExtra("note"));
                     else if(menuItem.getTitle().equals("Tạo tag"))
                     {
-                        if(tags == null)
-                            tags = AppDatabase.getInstance(EditorActivity.this).tagInterface().getTagsFromNoteID(noteID);
+                        TagDialog dialog = new TagDialog();
 
-                        new TagDialog(noteID, tags).show(getSupportFragmentManager(), "tag");
+                        Bundle bundle = new Bundle();
+                        bundle.putInt("noteId", noteID);
+                        bundle.putParcelableArrayList("tags", model.getTags());
+
+                        dialog.setArguments(bundle);
+                        dialog.show(getSupportFragmentManager(), "tag");
                     }
 
                     return true;
@@ -185,7 +272,7 @@ public class EditorActivity extends AppCompatActivity
             menu.show();
         });
         
-        revertBtn.setOnClickListener((View v) -> notePageListAdapter.revertCurrentPageDraw());
+        revertBtn.setOnClickListener((View v) -> ((NotePageListAdapter)notePageList.getAdapter()).revertCurrentPageDraw());
         
         backBtn.setOnClickListener((View v) ->
             Utils.showConfirmDialog("Bạn có muốn lưu ghi chú này", () ->
@@ -193,10 +280,10 @@ public class EditorActivity extends AppCompatActivity
                 int noteID = getIntent().getIntExtra("noteID", 0);
                 NoteEntity note = null;
                 Bitmap bm = Bitmap.createBitmap(
-                        notePageList.getWidth(), notePageList.getHeight(), Bitmap.Config.ARGB_8888);
+                        mainContent.getWidth(), mainContent.getHeight(), Bitmap.Config.ARGB_8888);
 
                 Canvas canvas = new Canvas(bm);
-                notePageList.draw(canvas);
+                mainContent.draw(canvas);
 
                 FileOutputStream fOut = null;
                 try
@@ -213,7 +300,7 @@ public class EditorActivity extends AppCompatActivity
                             f.getAbsolutePath(),
                             titleEditTxt.getText().toString(),
                             new Date(),
-                            model.pages.size() - 1,
+                            model.getLastPosition(),
                             getIntent().getIntExtra("folderID", 0));
 
                     fOut.close();
@@ -265,14 +352,28 @@ public class EditorActivity extends AppCompatActivity
         
         penBtn.setBackground(getResources().getDrawable(R.drawable.round_bg));
         lastBtn = penBtn;
+
+        model.observeTags().observe(this, new Observer<ArrayList<TagEntity>>() {
+            @Override
+            public void onChanged(ArrayList<TagEntity> tags)
+            {
+                if(tags == null)
+                {
+                    List<TagEntity> fetched
+                            = AppDatabase.getInstance(EditorActivity.this).tagInterface().getTagsFromNoteID(
+                            getIntent().getIntExtra("noteID", 0));
+
+                    model.fetchTags((ArrayList<TagEntity>) fetched);
+                }
+            }
+        });
     }
 
     private void saveTags()
     {
-        if(tags == null)
-            return;
+        int noteID = getIntent().getIntExtra("noteID", 0);
 
-        for(TagEntity tag : tags)
+        for(TagEntity tag : model.getTags())
         {
             int count =
                     AppDatabase.getInstance(this).tagInterface().checkIfThisTagExist(noteID, tag.getTagName());
@@ -301,6 +402,8 @@ public class EditorActivity extends AppCompatActivity
     {
         Utils.showConfirmDialog( "Bạn có muốn hủy ghi chú này?",() ->
         {
+            int noteID = getIntent().getIntExtra("noteID", 0);
+
             Intent intent = new Intent();
             intent.putExtra("index", getIntent().getIntExtra("index", 0));
             intent.putExtra("action", getIntent().getIntExtra("action", 0));
@@ -314,9 +417,9 @@ public class EditorActivity extends AppCompatActivity
 
     private void saveNotePagesContent(NoteEntity newNote) throws IOException
     {
-        for(int i=0;i<model.pages.size() - 1;i++)
+        for(int i=0;i<model.getLastPosition();i++)
         {
-            NotePageDTO page = model.pages.get(i);
+            NotePageDTO page = model.pageAt(i);
 
             File assetFolder = new File(noteFolder, newNote.getId() + "." + i);
             assetFolder.mkdir();
@@ -375,97 +478,16 @@ public class EditorActivity extends AppCompatActivity
         return Math.min(displayMetrics.widthPixels, displayMetrics.heightPixels);
     }
 
-    private void initNotPageList()
-    {
-        notePageListAdapter = new NotePageListAdapter(model.pages,
-                new NotePageListener()
-                {
-                    @Override
-                    public void notifyCanvasSize(int width, int height)
-                    {
-                        canvasWidth = width;
-                        canvasHeight = height;
-                    }
-
-                    @Override
-                    public void onPageFocus(int currentPageIndex)
-                    {
-                        toolArea.setVisibility(View.VISIBLE);
-                        isUsingTool = true;
-
-                        if(currentPageIndex == model.pages.size() - 1)
-                        {
-                            model.pages.add(new NotePageDTO(null, "", 20));
-                            notePageListAdapter.notifyItemInserted(model.pages.size() - 1);
-
-                            for(int i=0;i<model.pages.size();i++)
-                                notePageListAdapter.notifyItemChanged(i, NotePageListAdapter.INDEXING); // re-index!
-                        }
-                    }
-
-                    @Override
-                    public boolean isUsingPen()
-                    {
-                        return lastBtn == penBtn;
-                    }
-
-                    @Override
-                    public int getMode()
-                    {
-                        return mode;
-                    }
-
-                    @Override
-                    public int getColor()
-                    {
-                        return currentColor;
-                    }
-
-                    @Override
-                    public boolean checkLineLimit(String html)
-                    {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
-                        {
-                            limitEditTxt.setText(Html.fromHtml(html, Html.FROM_HTML_MODE_COMPACT));
-                            int count = limitEditTxt.getLineCount();
-
-                            int lines = (int)((double)
-                                    Utils.dpToPx(400, EditorActivity.this) / limitEditTxt.getLineHeight());
-
-                            Log.d("max", lines + "");
-                            Log.d("lineCount", count + "");
-                            return (lines <= count);
-                        }
-
-                        return false;
-                    }
-
-
-                }, this, getVerticalWidth());
-
-        LinearLayoutManager manager = new LinearLayoutManager(this)
-        {
-            @Override
-            public boolean canScrollVertically()
-            {
-                return lastBtn == penBtn;
-            }
-        };
-
-        notePageList.setAdapter(notePageListAdapter);
-        notePageList.setLayoutManager(manager);
-    }
-
-    private void prepare()
+    private List<NotePageDTO> fetch()
     {
         NoteEntity note = getIntent().getParcelableExtra("note");
 
+        List<NotePageDTO> pages = new ArrayList<>();
+
         if(note == null)
         {
-            if(model.pages.size() == 0)
-                model.pages.add(new NotePageDTO(null, "", 20));
-
-            return;
+            pages.add(new NotePageDTO(null, "", 20));
+            return pages;
         }
 
         File noteFolder = new File(getFilesDir(), "Note " + note.getId());
@@ -497,7 +519,7 @@ public class EditorActivity extends AppCompatActivity
                     }
                 }
 
-                model.pages.add(new NotePageDTO(bm, html, fontSize));
+                pages.add(new NotePageDTO(bm, html, fontSize));
                 fIn.close();
             }
             catch (IOException e)
@@ -516,7 +538,9 @@ public class EditorActivity extends AppCompatActivity
             }
         }
 
-        model.pages.add(new NotePageDTO(null, "", 20)); // dummy page
+        pages.add(new NotePageDTO(null, "", 20)); // dummy page
+
+        return pages;
     }
 
     private void toggle(ImageButton btn)

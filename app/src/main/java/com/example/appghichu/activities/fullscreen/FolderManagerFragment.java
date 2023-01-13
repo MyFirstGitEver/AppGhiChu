@@ -14,9 +14,9 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatButton;
 import androidx.constraintlayout.motion.widget.MotionLayout;
 import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentResultListener;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.sqlite.db.SimpleSQLiteQuery;
 
 import com.example.appghichu.AppDatabase;
 import com.example.appghichu.R;
@@ -25,9 +25,7 @@ import com.example.appghichu.adapters.AnimatingFolderListAdapter;
 import com.example.appghichu.dialogs.MoveFolderDialog;
 import com.example.appghichu.dialogs.RenameFolderDialog;
 import com.example.appghichu.interfaces.OnFolderManagerListener;
-import com.example.appghichu.interfaces.SimpleCallBack;
 import com.example.appghichu.objects.dtos.AnimatingFolderDTO;
-import com.example.appghichu.objects.dtos.FolderDTO;
 import com.example.appghichu.objects.entities.FolderEntity;
 
 import java.util.ArrayList;
@@ -46,15 +44,8 @@ public class FolderManagerFragment extends DialogFragment
 
     private boolean isSelecting;
 
-    private SimpleCallBack callback;
-
     public FolderManagerFragment()
     {
-    }
-
-    public FolderManagerFragment(SimpleCallBack callback)
-    {
-        this.callback = callback;
     }
 
     @Override
@@ -110,13 +101,14 @@ public class FolderManagerFragment extends DialogFragment
             @Override
             public void onRenameFolder(int id, int index)
             {
-                new RenameFolderDialog(id,
-                        (folderName) ->
-                        {
-                            folders.get(index).folder.setFolderName(folderName);
-                            adapter.notifyItemChanged(index);
-                        })
-                        .show(getActivity().getSupportFragmentManager(), "rename");
+                RenameFolderDialog dialog = new RenameFolderDialog();
+
+                Bundle bundle = new Bundle();
+                bundle.putInt("id", id);
+                bundle.putInt("index", index);
+
+                dialog.setArguments(bundle);
+                dialog.show(getChildFragmentManager(), "rename");
             }
 
             @Override
@@ -137,24 +129,14 @@ public class FolderManagerFragment extends DialogFragment
             @Override
             public void onMoveFolder(int id, int index)
             {
-                new MoveFolderDialog(folders,
-                        (parentID) ->
-                        {
-                            ArrayList<Integer> ids = getInbreedingFolders(
-                                    AppDatabase.getInstance(getContext()).folderInterface().findFolderByID(parentID));
+                MoveFolderDialog dialog = new MoveFolderDialog();
 
-                            if(ids.contains(id))
-                            {
-                                Toast.makeText(getContext(), "Can't move to this folder!", Toast.LENGTH_SHORT).show();
-                                return;
-                            }
+                Bundle bundle = new Bundle();
+                bundle.putInt("folderId", id);
+                bundle.putBoolean("multiple", false);
+                dialog.setArguments(bundle);
 
-                            AppDatabase.getInstance(getContext()).folderInterface().moveFolder(parentID, id);
-                            Toast.makeText(getContext(), "Moved successfully", Toast.LENGTH_SHORT).show();
-
-                            isSelecting = false;
-                            adapter.notifyDataSetChanged();
-                        }).show(getActivity().getSupportFragmentManager(), "move");
+                dialog.show(getChildFragmentManager(), "move");
             }
         });
         folderList.setAdapter(adapter);
@@ -175,7 +157,7 @@ public class FolderManagerFragment extends DialogFragment
 
         backBtn.setOnClickListener((View v) ->
         {
-            callback.run();
+            getParentFragmentManager().setFragmentResult("folder refresh", null);
             dismiss();
         });
 
@@ -226,26 +208,80 @@ public class FolderManagerFragment extends DialogFragment
 
             if(ids.size() != 0)
             {
-                new MoveFolderDialog(folders, (parentID) ->
+                MoveFolderDialog dialog =
+                        new MoveFolderDialog();
+
+                Bundle bundle = new Bundle();
+                bundle.putBoolean("multiple", true);
+
+                dialog.setArguments(bundle);
+                dialog.show(getChildFragmentManager(), "move folders");
+            }
+        });
+
+        getChildFragmentManager().setFragmentResultListener("move", getViewLifecycleOwner(), new FragmentResultListener()
+        {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result)
+            {
+                int parentId = result.getInt("id");
+                int id = result.getInt("folderId");
+
+                ArrayList<Integer> ids = getInbreedingFolders(
+                        AppDatabase.getInstance(getContext()).folderInterface().findFolderByID(parentId));
+
+                if(ids.contains(id))
                 {
-                    ArrayList<Integer> bannedIDs = getInbreedingFolders(
-                            AppDatabase.getInstance(getContext()).folderInterface().findFolderByID(parentID));
+                    Toast.makeText(getContext(), "Can't move to this folder!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
-                    for(int i=ids.size() - 1;i>=0;i--)
-                    {
-                        if(bannedIDs.contains(ids.get(i)))
-                            ids.remove(i);
-                    }
+                AppDatabase.getInstance(getContext()).folderInterface().moveFolder(parentId, id);
+                Toast.makeText(getContext(), "Moved successfully", Toast.LENGTH_SHORT).show();
 
-                    AppDatabase.getInstance(getContext()).folderInterface().moveFolders(ids, parentID);
+                isSelecting = false;
+                adapter.notifyDataSetChanged();
+            }
+        });
 
-                    moreOptionsArea.transitionToStart();
-                    isSelecting = false;
-                    adapter.notifyDataSetChanged();
+        getChildFragmentManager().setFragmentResultListener("move multiple", getViewLifecycleOwner(), new FragmentResultListener()
+        {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result)
+            {
+                int parentID = result.getInt("id");
 
-                    Toast.makeText(getContext(),
-                            "Some folders may not be moved since it contains the chosen folder", Toast.LENGTH_SHORT).show();
-                }).show(getActivity().getSupportFragmentManager(), "move folders");
+                ArrayList<Integer> ids = getAllCheckedIds();
+
+                ArrayList<Integer> bannedIDs = getInbreedingFolders(
+                        AppDatabase.getInstance(getContext()).folderInterface().findFolderByID(parentID));
+
+                for(int i=ids.size() - 1;i>=0;i--)
+                {
+                    if(bannedIDs.contains(ids.get(i)))
+                        ids.remove(i);
+                }
+
+                AppDatabase.getInstance(getContext()).folderInterface().moveFolders(ids, parentID);
+
+                moreOptionsArea.transitionToStart();
+                isSelecting = false;
+                adapter.notifyDataSetChanged();
+
+                Toast.makeText(getContext(),
+                        "Some folders may not be moved since it contains the chosen folder", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        getChildFragmentManager().setFragmentResultListener("rename", getViewLifecycleOwner(), new FragmentResultListener() {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result)
+            {
+                int index = result.getInt("index");
+                String folderName = result.getString("folderName");
+
+                folders.get(index).folder.setFolderName(folderName);
+                adapter.notifyItemChanged(index);
             }
         });
     }
@@ -265,7 +301,7 @@ public class FolderManagerFragment extends DialogFragment
                     return;
                 }
 
-                callback.run();
+                getParentFragmentManager().setFragmentResult("folder refresh", null);
                 dismiss();
             }
         };
