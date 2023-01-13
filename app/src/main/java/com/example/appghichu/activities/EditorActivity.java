@@ -2,15 +2,11 @@ package com.example.appghichu.activities;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.motion.widget.MotionLayout;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.app.AlertDialog;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -20,13 +16,13 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
-import android.graphics.RectF;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.Html;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
@@ -64,7 +60,7 @@ import java.util.List;
 public class EditorActivity extends AppCompatActivity
 {
     private ImageButton
-            boldBtn, italicBtn, penBtn, eraseBtn, drawerBtn, colorBtn, moreBtn, revertBtn, backBtn, lastBtn;
+            boldBtn, italicBtn, penBtn, eraseBtn, drawerBtn, colorBtn, moreBtn, revertBtn, backBtn;
     private LinearLayout drawerOptions;
     private MotionLayout toolArea;
     private FrameLayout mainContent;
@@ -74,24 +70,19 @@ public class EditorActivity extends AppCompatActivity
     private PopupWindow window;
     private EditorViewModel model;
 
-    private boolean isUsingDrawer, isUsingTool = true;
-    private int mode = MyCanvas.DRAW, currentColor = Color.RED, canvasWidth, canvasHeight;
-    private File noteFolder;
-
     private final NotePageListener notePageListener = new NotePageListener()
     {
         @Override
         public void notifyCanvasSize(int width, int height)
         {
-            canvasWidth = width;
-            canvasHeight = height;
+            model.setCanvasWidth(width);
+            model.setCanvasHeight(height);
         }
 
         @Override
         public void onPageFocus(int currentPageIndex)
         {
-            toolArea.setVisibility(View.VISIBLE);
-            isUsingTool = true;
+            model.setIsUsingTool(true);
 
             if(currentPageIndex == model.getLastPosition())
             {
@@ -107,19 +98,19 @@ public class EditorActivity extends AppCompatActivity
         @Override
         public boolean isUsingPen()
         {
-            return lastBtn == penBtn;
+            return model.getCurrentTool() == EditorViewModel.PEN;
         }
 
         @Override
         public int getMode()
         {
-            return mode;
+            return model.getMode();
         }
 
         @Override
         public int getColor()
         {
-            return currentColor;
+            return model.getCurrentColor();
         }
 
         @Override
@@ -140,8 +131,6 @@ public class EditorActivity extends AppCompatActivity
 
             return false;
         }
-
-
     };
 
     @Override
@@ -151,7 +140,7 @@ public class EditorActivity extends AppCompatActivity
         setContentView(R.layout.activity_editor);
 
         model = new ViewModelProvider(this).get(EditorViewModel.class);
-        noteFolder = new File(getFilesDir(), "Note " + getIntent().getIntExtra("noteID", 0));
+        File noteFolder = new File(getFilesDir(), "Note " + getIntent().getIntExtra("noteID", 0));
         noteFolder.mkdir();
 
         boldBtn = findViewById(R.id.boldBtn);
@@ -190,7 +179,7 @@ public class EditorActivity extends AppCompatActivity
             @Override
             public boolean canScrollVertically()
             {
-                return lastBtn == penBtn;
+                return model.getCurrentTool() == EditorViewModel.PEN;
             }
         };
         notePageList.setLayoutManager(manager);
@@ -209,35 +198,28 @@ public class EditorActivity extends AppCompatActivity
         
         penBtn.setOnClickListener((View v) ->
         {
-            toggle(penBtn);
+            model.setCurrentTool(EditorViewModel.PEN);
 
-            if(isUsingDrawer)
-            {
-                toolArea.transitionToStart();
-                isUsingDrawer = false;
-            }
+            if(model.isUsingDrawer())
+                model.setIsUsingDrawer(false);
         });
         
         eraseBtn.setOnClickListener((View v) ->
         {
-            mode = MyCanvas.ERASE;
-            toggle(eraseBtn);
-            if(!isUsingDrawer)
-            {
-                toolArea.transitionToEnd();
-                isUsingDrawer = true;
-            }
+            model.setMode(MyCanvas.ERASE);
+            model.setCurrentTool(EditorViewModel.ERASE);
+
+            if(!model.isUsingDrawer())
+                model.setIsUsingDrawer(true);
         });
         
         drawerBtn.setOnClickListener((View v) ->
         {
-            mode = MyCanvas.DRAW;
-            toggle(drawerBtn);
-            if(!isUsingDrawer)
-            {
-                toolArea.transitionToEnd();
-                isUsingDrawer = true;
-            }
+            model.setMode(MyCanvas.DRAW);
+            model.setCurrentTool(EditorViewModel.PENCIL);
+
+            if(!model.isUsingDrawer())
+                model.setIsUsingDrawer(true);
         });
         
         moreBtn.setOnClickListener((View v) ->
@@ -349,9 +331,6 @@ public class EditorActivity extends AppCompatActivity
                 setResult(action, intent);
                 finish();
             }, this));
-        
-        penBtn.setBackground(getResources().getDrawable(R.drawable.round_bg));
-        lastBtn = penBtn;
 
         model.observeTags().observe(this, new Observer<ArrayList<TagEntity>>() {
             @Override
@@ -367,6 +346,70 @@ public class EditorActivity extends AppCompatActivity
                 }
             }
         });
+
+        model.observeDrawerState().observe(this, new Observer<Boolean>()
+        {
+            @Override
+            public void onChanged(Boolean isUsingDrawer)
+            {
+                if(isUsingDrawer)
+                    toolArea.transitionToEnd();
+                else
+                    toolArea.transitionToStart();
+            }
+        });
+
+        model.observeToolState().observe(this, new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean isUsingTool)
+            {
+                if(isUsingTool)
+                    toolArea.setVisibility(View.VISIBLE);
+                else
+                    toolArea.setVisibility(View.GONE);
+            }
+        });
+
+        model.observeColor().observe(this, new Observer<Integer>()
+        {
+            @Override
+            public void onChanged(Integer color)
+            {
+                colorBtn.setBackgroundColor(color);
+            }
+        });
+
+        model.observeCurrentTool().observe(this, new Observer<Pair<Integer, Integer>>() {
+            @Override
+            public void onChanged(Pair<Integer, Integer> currentTool)
+            {
+                toggle(currentTool.first, false);
+                toggle(currentTool.second, true);
+            }
+        });
+    }
+
+    private void toggle(int id, boolean on)
+    {
+        int drawableId;
+
+        if(on)
+            drawableId = R.drawable.round_bg;
+        else
+            drawableId = 0;
+
+        switch (id)
+        {
+            case EditorViewModel.PEN:
+                penBtn.setBackgroundResource(drawableId);
+                break;
+            case EditorViewModel.ERASE:
+                eraseBtn.setBackgroundResource(drawableId);
+                break;
+            default:
+                drawerBtn.setBackgroundResource(drawableId);
+                break;
+        }
     }
 
     private void saveTags()
@@ -388,10 +431,9 @@ public class EditorActivity extends AppCompatActivity
     @Override
     public void onBackPressed()
     {
-        if(isUsingTool)
+        if(model.isUsingTool())
         {
-            isUsingTool = false;
-            toolArea.setVisibility(View.GONE);
+            model.setIsUsingTool(false);
             return;
         }
 
@@ -402,6 +444,12 @@ public class EditorActivity extends AppCompatActivity
     {
         Utils.showConfirmDialog( "Bạn có muốn hủy ghi chú này?",() ->
         {
+            if(note == null)
+            {
+                finish();
+                return;
+            }
+
             int noteID = getIntent().getIntExtra("noteID", 0);
 
             Intent intent = new Intent();
@@ -421,7 +469,10 @@ public class EditorActivity extends AppCompatActivity
         {
             NotePageDTO page = model.pageAt(i);
 
-            File assetFolder = new File(noteFolder, newNote.getId() + "." + i);
+            File assetFolder = new File(
+                    new File(getFilesDir(), "Note " + getIntent().getIntExtra("noteID", 0)),
+                    newNote.getId() + "." + i);
+
             assetFolder.mkdir();
 
             File htmlFile = new File(assetFolder, "html");
@@ -454,8 +505,8 @@ public class EditorActivity extends AppCompatActivity
             clearPaint.setAntiAlias(true);
 
             Rect rect = new Rect();
-            rect.set(0, 0, canvasWidth, canvasHeight);
-            Bitmap bm = Bitmap.createBitmap(canvasWidth, canvasHeight, Bitmap.Config.ARGB_8888);
+            rect.set(0, 0, model.getCanvasWidth(), model.getCanvasHeight());
+            Bitmap bm = Bitmap.createBitmap(model.getCanvasWidth(), model.getCanvasWidth(), Bitmap.Config.ARGB_8888);
 
             Canvas canvas = new Canvas(bm);
 
@@ -543,15 +594,6 @@ public class EditorActivity extends AppCompatActivity
         return pages;
     }
 
-    private void toggle(ImageButton btn)
-    {
-        if(lastBtn != btn)
-            lastBtn.setBackground(new ColorDrawable(Color.TRANSPARENT));
-
-        lastBtn = btn;
-        btn.setBackground(getResources().getDrawable(R.drawable.round_bg));
-    }
-
     private View popUpFragmentInit()
     {
         View fragment = getLayoutInflater().inflate(R.layout.color_picker, drawerOptions, false);
@@ -589,7 +631,6 @@ public class EditorActivity extends AppCompatActivity
 
     private void changeColor(int color)
     {
-        colorBtn.setBackgroundColor(color);
-        currentColor = color;
+        model.setCurrentColor(color);
     }
 }

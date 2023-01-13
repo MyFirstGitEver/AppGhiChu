@@ -15,6 +15,9 @@ import java.util.List;
 
 public class MainViewModel extends ViewModel
 {
+    private MutableLiveData<Integer> noteCounter = new MutableLiveData<>(1);
+    private MutableLiveData<Integer> currentFolderID = new MutableLiveData<>(0);
+
     private MutableLiveData<ArrayList<NoteEntity>> notes = new MutableLiveData<>(null);
     public MutableLiveData<Intent> editorIntent = new MutableLiveData<>();
 
@@ -77,5 +80,25 @@ public class MainViewModel extends ViewModel
     public MutableLiveData<ArrayList<NoteEntity>> observeNoteList()
     {
         return notes;
+    }
+
+    public void setCurrentFolder(int id)
+    {
+        currentFolderID.setValue(id);
+    }
+
+    public int getCurrentFolder()
+    {
+        return currentFolderID.getValue();
+    }
+
+    public void setNoteCounter(int counter)
+    {
+        noteCounter.setValue(counter);
+    }
+
+    public int getNoteCounter()
+    {
+        return noteCounter.getValue();
     }
 }

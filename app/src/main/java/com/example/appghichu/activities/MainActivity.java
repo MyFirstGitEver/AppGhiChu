@@ -60,8 +60,6 @@ public class MainActivity extends AppCompatActivity
     private RecyclerView noteList, folderList;
     private TextView folderTxt, navViewFolderTxt;
 
-    private int noteCounter = 1, currentFolderID = 0;
-
     private MainViewModel model;
     private FolderListAdapter folderListAdapter;
 
@@ -70,7 +68,10 @@ public class MainActivity extends AppCompatActivity
             result ->
             {
                 if(result.getData() == null)
+                {
                     Toast.makeText(this, "Failed to edit/create your note. We're sorry :(", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
                 int code = result.getResultCode();
                 if(code == Utils.DISCARD_NOTE)
@@ -109,8 +110,8 @@ public class MainActivity extends AppCompatActivity
 
                         model.insertNewNote(note);
                         noteList.getAdapter().notifyItemInserted(model.getLastPosition());
-                        note.setFolderID(currentFolderID);
-                        noteCounter++;
+                        note.setFolderID(model.getCurrentFolder());
+                        model.setNoteCounter(model.getNoteCounter() + 1);
                     }
                     else
                     {
@@ -143,7 +144,7 @@ public class MainActivity extends AppCompatActivity
 
     private final OnNoteClickListener mainNoteClickListener = (note, index) ->
     {
-        if(currentFolderID == -1)
+        if(model.getCurrentFolder() == -1)
         {
             Utils.showRestoreDialog("Bạn có muốn vĩnh viễn xóa ghi chú này không ?",
                     () ->
@@ -186,7 +187,7 @@ public class MainActivity extends AppCompatActivity
         intent.putExtra("noteID", note.getId());
         intent.putExtra("action", Utils.OPEN_FOR_EDIT);
         intent.putExtra("index", index);
-        intent.putExtra("folderID", currentFolderID);
+        intent.putExtra("folderID", model.getCurrentFolder());
 
         mainLauncher.launch(intent);
     };
@@ -196,7 +197,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onMoveToFolder(int folderID)
         {
-            if(currentFolderID == folderID)
+            if(model.getCurrentFolder() == folderID)
                 return;
 
             Intent intent = new Intent(MainActivity.this, MainActivity.class);
@@ -209,7 +210,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onMoveToMain()
         {
-            if(currentFolderID == 0)
+            if(model.getCurrentFolder() == 0)
                 return;
 
             Intent intent = new Intent(MainActivity.this, MainActivity.class);
@@ -222,7 +223,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onMoveToTrashBin()
         {
-            if(currentFolderID == -1)
+            if(model.getCurrentFolder() == -1)
                 return;
 
             Intent intent = new Intent(MainActivity.this, MainActivity.class);
@@ -251,7 +252,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onCreateNewFolder(String folderName)
         {
-            if(currentFolderID == -1)
+            if(model.getCurrentFolder() == -1)
             {
                 Toast.makeText(MainActivity.this, "Can't create new folder in trash bin!", Toast.LENGTH_SHORT).show();
                 return;
@@ -262,7 +263,7 @@ public class MainActivity extends AppCompatActivity
             if(folderInterface.checkIfFolderAlreadyExists(folderName) == 1)
                 Toast.makeText(MainActivity.this, "This folder name already exists", Toast.LENGTH_SHORT).show();
             else
-                folderInterface.insertToParentFolder(currentFolderID, folderName);
+                folderInterface.insertToParentFolder(model.getCurrentFolder(), folderName);
 
             List<FolderEntity> folders = folderInterface.listFoldersUsingParentID(0);
 
@@ -291,9 +292,9 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        currentFolderID = getIntent().getIntExtra("current", 0);
-
         model = new ViewModelProvider(this).get(MainViewModel.class);
+
+        model.setCurrentFolder(getIntent().getIntExtra("current", 0));
 
         folderTxt = findViewById(R.id.folderTxt);
         drawer = findViewById(R.id.drawer);
@@ -332,9 +333,9 @@ public class MainActivity extends AppCompatActivity
         addBtn.setOnClickListener((View v) ->
         {
             Intent intent = new Intent(MainActivity.this, EditorActivity.class);
-            intent.putExtra("noteID", noteCounter);
+            intent.putExtra("noteID", model.getNoteCounter());
             intent.putExtra("action", Utils.OPEN_FOR_ADD_NEW);
-            intent.putExtra("folderID", currentFolderID);
+            intent.putExtra("folderID", model.getCurrentFolder());
 
             mainLauncher.launch(intent);
         });
@@ -388,7 +389,7 @@ public class MainActivity extends AppCompatActivity
             public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result)
             {
                 FolderEntity folder = AppDatabase.getInstance(MainActivity.this).folderInterface()
-                        .findFolderByID(currentFolderID);
+                        .findFolderByID(model.getCurrentFolder());
 
                 if(folder != null)
                 {
@@ -448,35 +449,35 @@ public class MainActivity extends AppCompatActivity
         FolderDAO folderInterface = AppDatabase.getInstance(this).folderInterface();
         NoteDAO noteInterface = AppDatabase.getInstance(this).noteInterface();
 
-        if(currentFolderID == 0 && folderInterface.checkIfFolderExistsUsingID(0) == 0)
+        if(model.getCurrentFolder() == 0 && folderInterface.checkIfFolderExistsUsingID(0) == 0)
             folderInterface.initMainFolder();
 
         if(folderInterface.checkIfFolderExistsUsingID(-1) == 0)
             folderInterface.initTrashFolder();
 
-        FolderEntity folder = folderInterface.findFolderByID(currentFolderID);
+        FolderEntity folder = folderInterface.findFolderByID(model.getCurrentFolder());
         folderTxt.setText(folder.getFolderName());
 
-        int folderCount = folderInterface.countFoldersInsideFolder(currentFolderID);
+        int folderCount = folderInterface.countFoldersInsideFolder(model.getCurrentFolder());
 
-        if(currentFolderID == 0)
+        if(model.getCurrentFolder() == 0)
             folderCount--;
 
         navViewFolderTxt.setText(folder.getFolderName() + "\n" + "Tổng cộng " +
-                noteInterface.countNotesInsideFolder(currentFolderID) + " ghi chú và " +
+                noteInterface.countNotesInsideFolder(model.getCurrentFolder()) + " ghi chú và " +
                 folderCount + " thư mục");
     }
 
     private void initNoteList()
     {
-        List<NoteEntity> notes = AppDatabase.getInstance(this).noteInterface().getAllNotesInFolder(currentFolderID);
+        List<NoteEntity> notes = AppDatabase.getInstance(this).noteInterface().getAllNotesInFolder(model.getCurrentFolder());
 
         model.initNoteList((ArrayList<NoteEntity>) notes);
 
         if(model.getLastPosition() == -1)
             model.insertNewNote(null);
 
-        noteCounter = AppDatabase.getInstance(this).noteInterface().getCurrentNoteID() + 1;
+        model.setNoteCounter(AppDatabase.getInstance(this).noteInterface().getCurrentNoteID() + 1);
     }
 
     private void initDrawerOptionsHandler()
