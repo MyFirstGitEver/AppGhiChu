@@ -24,6 +24,5 @@ Yêu cầu cài sẵn Android studio để chạy thử project.
 * Adapters: package lưu các adapter của recyclerView.
 * Dialogs : package chứa các pop-up dialog.
 * DAOS:  package chứa các lớp giao diện hỗ trợ truy vấn database
-* Models: package chứa các Viewmodel hỗ trợ tương tác activity-fragment
-* Objects: package chứa các data model chia làm ba loại: entity(object tượng trưng bảng trong SQLite), DTO(object chứa nội dung hiển th trong các recyclerViewị) và các object khác
-* Interfaces: Chứa các lớp giao diện như các callback hỗ trợ tương tác activity-fragment
+* Models: package chứa các Viewmodel hỗ trợ lưu trữ các trạng thái của fragment và activity
+* Objects: package chứa các data model chia làm ba loại: entity(object tượng trưng bảng trong SQLite), DTO(object chứa nội dung hiển th trong các recyclerView) và các object khác
